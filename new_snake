@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2016 Matthew Stone <mstone5@mgh.harvard.edu>
+# Distributed under terms of the MIT license.
+
+"""
+Create template snakemake project directory
+"""
+
+import argparse
+import os
+import subprocess as sp
+
+
+# Docstring template
+SNAKEFILE_DOCSTRING = """{project}.snake
+Matthew Stone <mstone5@mgh.harvard.edu>
+
+{{doc}}
+"""
+
+# Rules template
+SNAKEFILE_RULES = """configfile: 'config.yaml'
+
+CHROMS = [str(x) for x in range(1, 23)] + 'X Y'.split()
+
+rule all:
+    input:
+        pass
+"""
+
+# Full Snakefile template
+SNAKEFILE_TEMPLATE = '"""\n{docstring}"""\n\n{rules}'
+SNAKEFILE_TEMPLATE = SNAKEFILE_TEMPLATE.format(docstring=SNAKEFILE_DOCSTRING,
+                                               rules=SNAKEFILE_RULES)
+
+# cluster.yaml template
+# Includes default LSF parameters and pattern for s/rulename/${rulename}
+CLUSTER_TEMPLATE = """# LSF configuration
+__default__:
+    queue: normal
+    sla: miket_sc
+    log: logs/snakemake.out
+    jobname: snakemake
+rulename:
+    queue: normal
+    sla: miket_sc
+    log: logs/rulename.out
+    jobname: rulename
+"""
+
+CONFIG_TEMPLATE = """# Project constants
+blacklist: /data/talkowski/rlc47/src/b37.lumpy.exclude.4-13.bed.gz
+"""
+
+
+def make_snake_project(project, symlinks):
+    """
+    Parameters
+    ----------
+    project : str
+        Project directory name
+    symlinks : list of str
+        List of directories to symlink into project (absolute or relative)
+    """
+
+    if os.path.exists(project):
+        raise Exception('Directory {} already exists'.format(project))
+
+    # Create project directory
+    os.mkdir(project)
+
+    # Symlink in desired data directories and exclude from git
+    GITIGNORE_TEMPLATE = "logs\n.gitignore"
+    for symlink in symlinks:
+        pathname = os.path.realpath(symlink)
+        dirname = os.path.basename(pathname)
+        os.symlink(pathname, os.path.join(project, dirname))
+        GITIGNORE_TEMPLATE = GITIGNORE_TEMPLATE + '\n' + dirname
+
+    # Create log directory for snakefile jobs
+    os.chdir(project)
+    os.mkdir('logs')
+    os.mkdir('scripts')
+    os.mkdir('data')
+
+    # Create default snakefile named after project
+    snakefile = open('Snakefile', 'w')
+    template = SNAKEFILE_TEMPLATE.format(project=project)
+    snakefile.write(template)
+    snakefile.close()
+
+    # Create cluster.yaml template
+    cluster = open('cluster.yaml', 'w')
+    cluster.write(CLUSTER_TEMPLATE)
+    cluster.close()
+
+    # Create config.yaml template
+    config = open('config.yaml', 'w')
+    config.write(CONFIG_TEMPLATE)
+    config.close()
+
+    # Create git repo
+    sp.call('git init'.split())
+    sp.call('git add Snakefile cluster.yaml config.yaml scripts data'.split())
+    sp.call('git commit -m "Init"'.split())
+    gitignore = open('.gitignore', 'w')
+    gitignore.write(GITIGNORE_TEMPLATE)
+    gitignore.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('project', help='Project directory name')
+    parser.add_argument('symlinks', nargs='+',
+                        help='Files and directories to symlink into project')
+    args = parser.parse_args()
+
+    make_snake_project(args.project, args.symlinks)
+
+
+if __name__ == '__main__':
+    main()
