@@ -1,27 +1,26 @@
 #!/bin/bash
 #
-# sub_snake.sh
+# sub_pesr.sh
 #
-# Submit Snakefile to LSF queue
-# Any parameters are passed to snakemake
+# 
 #
 # Copyright (C) 2016 Matthew Stone <mstone5@mgh.harvard.edu>
 # Distributed under terms of the MIT license.
 
 set -e 
 
-# snakefile=$1
-# shift
-# rerun=$@
-# snakename=$(basename $snakefile)
-# snakename="${snakename%.*}"
+snakefile=$1
+shift
+rerun=$@
 
-params=$@
+snakename=$(basename $snakefile)
+snakename="${snakename%.*}"
 
 bsub -q normal -o logs/${snakename}.out -sla miket_sc -J ${snakename}_MASTER "
 snakemake \
+  -s ${snakefile} \
   --cluster-config cluster.yaml \
   --cluster 'bsub -q {cluster.queue} -o {cluster.log} -sla miket_sc -J {cluster.jobname}' \
   --jobs 10000 \
-  ${params}"
+  ${rerun}"
 
