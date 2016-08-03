@@ -127,11 +127,9 @@ def job_stats(logfile):
     """
 
     logs = [log.series for log in parse_logs(logfile)]
-    skip_cols = 'jobname start end queue host'.split()
-    stats = pd.concat(logs, axis=1).drop(skip_cols).transpose()
+    stats = pd.concat(logs, axis=1).transpose()
     stats = stats.set_index('jobID')
     stats['walltime_hr'] = stats['walltime'] / 3600
-    stats = stats.astype(float)
 
     return stats
 
@@ -142,7 +140,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('logfile')
-    parser.add_argument('logstats', default='job_stats.txt')
+    parser.add_argument('logstats')
     args = parser.parse_args()
 
     stats = job_stats(args.logfile)
