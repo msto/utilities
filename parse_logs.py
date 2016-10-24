@@ -157,9 +157,12 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('logfile', type=argparse.FileType('r'))
-    parser.add_argument('logstats')
-    parser.add_argument('--output', type=argparse.FileType('w'))
+    parser.add_argument('logfile', type=argparse.FileType('r'),
+                        help='LSF log file to parse')
+    parser.add_argument('logstats',
+                        help='Tidied LSF log statistics')
+    parser.add_argument('--output', type=argparse.FileType('w'),
+                        help='stdout/stderr of each job')
     args = parser.parse_args()
 
     logs = list(parse_logs(args.logfile))
