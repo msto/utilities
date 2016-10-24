@@ -115,7 +115,7 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('project', help='Project directory name')
-    parser.add_argument('symlinks', nargs='+',
+    parser.add_argument('symlinks', nargs='*',
                         help='Files and directories to symlink into project')
     args = parser.parse_args()
 
