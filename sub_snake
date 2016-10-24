@@ -20,7 +20,7 @@ bsub -q normal -o logs/${snakename}.out -sla miket_sc -J ${snakename}_MASTER "
 snakemake \
   -s ${snakefile} \
   --cluster-config cluster.yaml \
-  --cluster 'bsub -q {cluster.queue} -o {cluster.log} -sla miket_sc -J {cluster.jobname}' \
+  --cluster 'bsub -q {cluster.queue} -o {cluster.log} -sla miket_sc -J {cluster.jobname} {cluster.flags}' \
   --jobs 10000 \
   ${rerun}"
 
