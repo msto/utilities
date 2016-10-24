@@ -16,7 +16,7 @@ import pandas as pd
 
 class LSFLog(object):
     def __init__(self, jobID, jobname, host, queue, start, end, walltime,
-                 cmd, cpu, mem, swap, output_lines=[]):
+                 cmd, status, cpu, mem, swap, output_lines=[]):
         self.jobID = jobID
         self.jobname = jobname
         self.host = host
@@ -25,6 +25,7 @@ class LSFLog(object):
         self.end = end
         self.walltime = walltime
         self.cmd = cmd
+        self.status = status
         self.cpu = cpu
         self.mem = mem
         self.swap = swap
@@ -65,6 +66,8 @@ def parse_logs(logfile):
     for line in logfile:
         if line.startswith('Sender'):
             if log is not None:
+                if len(log.output_lines) == 0:
+                    log.output_lines = ['']
                 yield log
 
             subject = next(logfile)
@@ -89,44 +92,59 @@ def parse_logs(logfile):
 
             for i in range(5):
                 next(logfile)
-            cmd = next(logfile).strip()
+            cmd = ''
+            for line in logfile:
+                if line.startswith('--------'):
+                    cmd = cmd.strip()
+                    break
+                cmd = cmd + ' ' + line.strip()
 
-            for i in range(6):
-                next(logfile)
+            next(logfile)
+            statusline = next(logfile)
+            if statusline.startswith('Successfully completed'):
+                status = 'DONE'
+            else:
+                status = 'EXIT'
+
             cpuline = next(logfile)
+            while re.search(cpu_exp, cpuline) is None:
+                cpuline = next(logfile)
             cpu = float(re.search(cpu_exp, cpuline).group(1))
+
             memline = next(logfile)
             mem = int(re.search(mem_exp, memline).group(1))
             swapline = next(logfile)
             swap = int(re.search(mem_exp, swapline).group(1))
 
             log = LSFLog(jobID, jobname, host, queue, start, end, walltime,
-                         cmd, cpu, mem, swap, [])
+                         cmd, status, cpu, mem, swap, [])
 
-        elif line.startswith('The output (if any) follows'):
-            next(logfile)
+            for i in range(6):
+                next(logfile)
 
         elif log is not None:
-            log.output_lines.append(line)
+            log.output_lines.append(line.strip())
 
+    if len(log.output_lines) == 0:
+        log.output_lines = ['']
     yield log
 
 
-def job_stats(logfile):
+def job_stats(logs):
     """
     Return numeric job stats as dataframe
 
     Parameters
     ----------
-    logfile : file
-        Open LSF log file handle
+    logs : list of LSFLog
+        LSF logs
 
     Returns
     -------
     stats : pd.DataFrame
     """
 
-    logs = [log.series for log in parse_logs(logfile)]
+    logs = [log.series for log in logs]
     stats = pd.concat(logs, axis=1).transpose()
     stats = stats.set_index('jobID')
     stats['walltime_hr'] = stats['walltime'] / 3600
@@ -139,12 +157,18 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('logfile')
+    parser.add_argument('logfile', type=argparse.FileType('r'))
     parser.add_argument('logstats')
+    parser.add_argument('--output', type=argparse.FileType('w'))
     args = parser.parse_args()
 
-    stats = job_stats(args.logfile)
+    logs = list(parse_logs(args.logfile))
+
+    stats = job_stats(logs)
     stats.to_csv(args.logstats, sep='\t')
+
+    for log in logs:
+        args.output.write('{0}\t{1}\t{2}\t{3}\n'.format(log.jobID, 'A', log.output_lines[0], 'B'))
 
 
 if __name__ == '__main__':
