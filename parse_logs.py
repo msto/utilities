@@ -8,6 +8,7 @@
 Parse LSF log files
 """
 
+import sys
 import argparse
 import re
 from datetime import datetime
@@ -77,7 +78,11 @@ def parse_logs(logfile):
             next(logfile)
             next(logfile)
             execline = next(logfile)
-            host = re.search(host_exp, execline).group(1)
+            try:
+                host = re.search(host_exp, execline).group(1)
+            except:
+                sys.stderr.write('Malformed job log: {0}\n'.format(jobID))
+                continue
             queue = re.search(queue_exp, execline).group(1)
 
             next(logfile)
@@ -112,9 +117,15 @@ def parse_logs(logfile):
             cpu = float(re.search(cpu_exp, cpuline).group(1))
 
             memline = next(logfile)
-            mem = int(re.search(mem_exp, memline).group(1))
+            try:
+                mem = int(re.search(mem_exp, memline).group(1))
+            except AttributeError:
+                mem = 0
             swapline = next(logfile)
-            swap = int(re.search(mem_exp, swapline).group(1))
+            try:
+                swap = int(re.search(mem_exp, swapline).group(1))
+            except AttributeError:
+                swap = 0
 
             log = LSFLog(jobID, jobname, host, queue, start, end, walltime,
                          cmd, status, cpu, mem, swap, [])
