@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# condor_sub_snake
+#
+# Submit Snakefile to Condor scheduler 
+#
+# Copyright (C) 2019 Matthew Stone <mrstone3@wisc.edu>
+# Distributed under terms of the MIT license.
+
+set -e 
+
+snakefile=$1
+shift
+rerun=$@
+
+snakename=$(basename $snakefile)
+snakename="${snakename%.*}"
+
+# TODO: submit driver Snakemake job to Condor
+# TODO: fix requst_cpus typo in /usr/bin/condor_qsub
+# bsub -q normal -o logs/${snakename}.out -sla miket_sc -J ${snakename}_MASTER "
+snakemake \
+  -s ${snakefile} \
+  --cluster-config cluster.yaml \
+  --cluster 'condor_qsub -o {cluster.stdout} -e {cluster.stderr} -l file={cluster.disk} -l mem={cluster.mem} -v "Log={cluster.log}" -v "JobBatchName={cluster.jobname}" {cluster.flags}' \
+  --jobs 10000 \
+  ${rerun}
+  # ${rerun}"
+
