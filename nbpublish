@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# nbpublish
+#
+# Convert jupyter notebook to html and post to public page site.
+#
+# Copyright (C) 2019 Matthew Stone <mrstone3@wisc.edu>
+# Distributed under terms of the MIT license.
+
+usage() {
+  cat <<EOF
+usage: nbpublish [-h] [-f] notebook dest_dir
+
+Convert jupyter notebook to html and post to public page site.
+
+Required arguments:
+  notebook    Notebook to render and upload.
+  dest_dir    Destination directory on pages server to copy notebook to.
+
+Optional arguments:
+  -f          Force overwrite of html if it exists locally or remotely.
+  -h          Show this help message and exit.
+EOF
+}
+
+OVERWRITE=false
+while getopts ":fh" opt; do
+  case ${opt} in
+    f)
+      OVERWRITE=true
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Invalid option" 1>&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [[ $# -ne 2 ]]; then
+  echo "Requires exactly two arguments" 1>&2
+  usage
+  exit 1
+fi
+
+notebook=$1
+dest_dir=$2
+
+# Strip ipynb extension to get filepath prefix
+prefix="${notebook%.ipynb}"
+html=${prefix}.html
+
+# Check if html conversion already exists - TODO later
+# if [[ ("${OVERWRITE}" = false) && (-f "${html}") ]]; then
+  # echo -n "Notebook has already been converted to HTML. Overwrite? [y/n] "
+# fi
+
+# Render html
+jupyter nbconvert --to html ${notebook}
+
+# Check if version already exists on pages - TODO later
+ssh pages mkdir -p public_html/${dest_dir}
+rsync -avz $html mstone@pages.discovery.wisc.edu:~/public_html/${dest_dir}/$(basename $html)
