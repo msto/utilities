@@ -33,8 +33,7 @@ parser.add_argument('-e', '--edit', default=False, action='store_true',
                     'exist, default template will be written first.')
 args = parser.parse_args()
 
-root_dir = Path('/apps/modulefiles/lab/miket')
-template = Path('/apps/modulefiles/lab/miket/template')
+root_dir = Path('/mnt/dv/wid/projects2/Roy-common/programs/thirdparty/modulefiles')
 
 # Make directory for software if it was not previously installed
 module_dir = root_dir / args.module
@@ -69,7 +68,7 @@ proc ModulesHelp {{ }} {{
 module-whatis   "Loads {module}-{version} environment"
 
 set     {module}version    {version}
-set     {module}_root      /apps/lab/miket/{module}/{version}
+set     {module}_root      /mnt/dv/wid/projects2/Roy-common/programs/thirdparty/{module}/{version}
 prepend-path    PATH    {path}
 """.format(module=args.module, version=args.version, path=path)
 
