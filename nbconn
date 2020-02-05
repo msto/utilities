@@ -1,0 +1,113 @@
+#!/bin/bash
+#
+# nbconn
+#
+# Connect to remote Jupyter server.
+#
+# Copyright (C) 2019 Matthew Stone <mrstone3@wisc.edu>
+# Distributed under terms of the MIT license.
+
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+usage: nbconn [-h] [-u USER] [-s HOST] [-p PORT] server
+
+Connect to remote Jupyter server. 
+
+Sets up port forwarding from a local port to the remote port where the server
+is running (by default uses the same port both locally and remotely), then
+opens the Jupyter server in the system default browser.
+
+Includes shortcuts with default usernames/hostnames/ports for most frequently
+used connections, but permits over-writing these.
+
+Required arguments:
+  server      Server name (used to look up default user/host/port)
+
+Optional arguments:
+  -u USER     Username
+  -s HOST     Host adddress
+  -p PORT     Port
+  -h          Show this help message and exit.
+EOF
+}
+
+USER=""
+HOST=""
+PORT=""
+while getopts ":u:s:p:h" opt; do
+  case ${opt} in
+    u)
+      USER=$OPTARG
+      ;;
+    s)
+      HOST=$OPTARG
+      ;;
+    p)
+      PORT=$OPTARG
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    #TODO: add -k kill option
+    *)
+      echo "Invalid option" 1>&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [[ $# -ne 1 ]]; then
+  # TODO: don't require server default if all three of user,host,port specified
+  echo -e "ERROR: Requires exactly one argument\n" 1>&2
+  usage
+  exit 1
+fi
+
+server=$1
+
+case ${server} in
+  roy1)
+    DEFAULT_USER=mstone
+    DEFAULT_HOST=roy-exec-1.discovery.wisc.edu
+    DEFAULT_PORT=8892
+    ;;
+  roy4)
+    DEFAULT_USER=mstone
+    DEFAULT_HOST=roy-exec-4.discovery.wisc.edu
+    DEFAULT_PORT=8892
+    ;;
+  mi2)
+    # TODO: can we check VPN status?
+    DEFAULT_USER=mrstone3
+    DEFAULT_HOST=mi2.biostat.wisc.edu
+    DEFAULT_PORT=8896
+    ;;
+  *)
+    echo "ERROR: Invalid server shortcut: ${server}" 1>&2
+    exit 1
+    ;;
+esac
+
+# Set defaults if they weren't overridden at command line
+if [[ -z "${USER}" ]]; then
+  USER=${DEFAULT_USER}
+fi
+
+if [[ -z "${HOST}" ]]; then
+  HOST=${DEFAULT_HOST}
+fi
+
+if [[ -z "${PORT}" ]]; then
+  PORT=${DEFAULT_PORT}
+fi
+
+# Set up port forwarding
+ssh -N -f -L localhost:${PORT}:localhost:${PORT} ${USER}@${HOST}
+
+# Open in browser
+open http://localhost:${PORT}
